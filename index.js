@@ -3,18 +3,7 @@
 */
 var ElementType = require('domelementtype');
 var entities = require('entities');
-
-var unencodedElements = {
-  __proto__: null,
-  style: true,
-  script: true,
-  xmp: true,
-  iframe: true,
-  noembed: true,
-  noframes: true,
-  plaintext: true,
-  noscript: true
-};
+var _ = require('lodash');
 
 /*
   Format attributes
@@ -32,41 +21,13 @@ function formatAttrs(attributes, opts) {
       output += ' ';
     }
 
-    output += key;
-    if ((value !== null && value !== '') || opts.xmlMode) {
-        output += '="' + (opts.decodeEntities ? entities.encodeXML(value) : value) + '"';
-    }
+    output += _.camelCase(key);
+    output += '="' + entities.encodeXML(value) + '"';
+
   }
 
   return output;
 }
-
-/*
-  Self-enclosing tags (stolen from node-htmlparser)
-*/
-var singleTag = {
-  __proto__: null,
-  area: true,
-  base: true,
-  basefont: true,
-  br: true,
-  col: true,
-  command: true,
-  embed: true,
-  frame: true,
-  hr: true,
-  img: true,
-  input: true,
-  isindex: true,
-  keygen: true,
-  link: true,
-  meta: true,
-  param: true,
-  source: true,
-  track: true,
-  wbr: true,
-};
-
 
 var render = module.exports = function(dom, opts) {
   if (!Array.isArray(dom) && !dom.cheerio) dom = [dom];
@@ -82,11 +43,11 @@ var render = module.exports = function(dom, opts) {
     else if (ElementType.isTag(elem))
       output += renderTag(elem, opts);
     else if (elem.type === ElementType.Directive)
-      output += renderDirective(elem);
+      output += "";
     else if (elem.type === ElementType.Comment)
-      output += renderComment(elem);
+      output += "";
     else if (elem.type === ElementType.CDATA)
-      output += renderCdata(elem);
+      output += "";
     else
       output += renderText(elem, opts);
   }
@@ -95,9 +56,6 @@ var render = module.exports = function(dom, opts) {
 };
 
 function renderTag(elem, opts) {
-  // Handle SVG
-  if (elem.name === "svg") opts = {decodeEntities: opts.decodeEntities, xmlMode: true};
-
   var tag = '<' + elem.name,
       attribs = formatAttrs(elem.attribs, opts);
 
@@ -105,44 +63,24 @@ function renderTag(elem, opts) {
     tag += ' ' + attribs;
   }
 
-  if (
-    opts.xmlMode
-    && (!elem.children || elem.children.length === 0)
-  ) {
-    tag += '/>';
+  if (!elem.children || elem.children.length === 0) {
+    tag += ' />';
   } else {
     tag += '>';
-    if (elem.children) {
-      tag += render(elem.children, opts);
-    }
-
-    if (!singleTag[elem.name] || opts.xmlMode) {
-      tag += '</' + elem.name + '>';
-    }
+    tag += render(elem.children, opts);
+    tag += '</' + elem.name + '>';
   }
 
   return tag;
-}
-
-function renderDirective(elem) {
-  return '<' + elem.data + '>';
 }
 
 function renderText(elem, opts) {
   var data = elem.data || '';
 
   // if entities weren't decoded, no need to encode them back
-  if (opts.decodeEntities && !(elem.parent && elem.parent.name in unencodedElements)) {
+  if (!elem.parent) {
     data = entities.encodeXML(data);
   }
 
   return data;
-}
-
-function renderCdata(elem) {
-  return '<![CDATA[' + elem.children[0].data + ']]>';
-}
-
-function renderComment(elem) {
-  return '<!--' + elem.data + '-->';
 }
