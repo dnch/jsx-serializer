@@ -1,5 +1,5 @@
 MOCHA = node_modules/.bin/mocha
-XYZ = node_modules/.bin/xyz --message X.Y.Z --repo git@github.com:cheeriojs/dom-serializer.git
+XYZ = node_modules/.bin/xyz --message X.Y.Z --repo git@github.com:dnch/react-serializer.git
 
 
 .PHONY: release-major release-minor release-patch
